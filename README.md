@@ -261,7 +261,7 @@
 
 <details>
   <summary><b>위시리스트 추가 및 조회</b></summary>
-
+</br>
   <p><b>위시리스트 생성(찜 추가)</b></p>
   <p align="center">
     <img src="https://github.com/user-attachments/assets/5c60221a-f9e2-4d24-aa23-daf529b21045"
