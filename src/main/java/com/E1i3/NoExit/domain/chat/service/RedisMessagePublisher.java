@@ -1,27 +1,30 @@
 package com.E1i3.NoExit.domain.chat.service;
 
+import com.E1i3.NoExit.domain.chat.dto.ChatMessage;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.stereotype.Service;
 
-// 메세지 발행
 @Service
+@RequiredArgsConstructor
 public class RedisMessagePublisher {
+
     @Qualifier("chatRedisTemplate")
     private final RedisTemplate<String, Object> redisTemplate;
-    @Qualifier("chatTopic")
-    private final ChannelTopic topic;
 
-    public RedisMessagePublisher(
-            @Qualifier("chatRedisTemplate") RedisTemplate<String, Object> redisTemplate,
-            @Qualifier("chatTopic") ChannelTopic topic) {
-        this.redisTemplate = redisTemplate;
-        this.topic = topic;
-    }
+    private final ObjectMapper objectMapper;
 
-    public void publish(String message) {
-        System.out.println("Publishing message to Redis topic: " + topic.getTopic());
-        redisTemplate.convertAndSend(topic.getTopic(), message);
+    private static final String CHAT_CHANNEL = "chatroom";
+
+    public void publish(ChatMessage chatMessage) {
+        try {
+            String payload = objectMapper.writeValueAsString(chatMessage);
+            redisTemplate.convertAndSend(CHAT_CHANNEL, payload);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to publish chat message", e);
+        }
     }
 }
