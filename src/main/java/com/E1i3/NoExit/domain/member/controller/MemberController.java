@@ -116,32 +116,36 @@ public class MemberController {
 	@Operation(summary = "[사용자] 로그인 API")
 	@PostMapping("/doLogin")
 	public ResponseEntity<Object> doLogin(@RequestBody LoginReqDto loginReqDto) {
-		Map<String, Object> loginInfo = new HashMap<>();
-		Object user = memberService.login(loginReqDto);
-
-		if (user instanceof Member) {
-			Member member = (Member)user;
-			String jwtToken = jwtTokenProvider.createToken(member.getEmail(), member.getRole().toString());
-			String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail(), member.getRole().toString());
-
-			loginInfo.put("id", member.getId());
-			loginInfo.put("token", jwtToken);
-			loginInfo.put("refreshToken", refreshToken);
-
-			return new ResponseEntity<>(new CommonResDto(HttpStatus.OK, "일반 사용자 로그인 성공", loginInfo), HttpStatus.OK);
-		} else if (user instanceof Owner) {
-			Owner owner = (Owner)user;
-			String jwtToken = jwtTokenProvider.createToken(owner.getEmail(), owner.getRole().toString());
-			String refreshToken = jwtTokenProvider.createRefreshToken(owner.getEmail(), owner.getRole().toString());
-
-			loginInfo.put("id", owner.getId());
-			loginInfo.put("token", jwtToken);
-			loginInfo.put("refreshToken", refreshToken);
-			return new ResponseEntity<>(new CommonResDto(HttpStatus.OK, "점주 로그인 성공", loginInfo), HttpStatus.OK);
-		}
-
-		// 생성된 토큰을 comonResDto에 담아서 사용자에게 리턴
-		return null;
+	    Map<String, Object> loginInfo = new HashMap<>();
+	    Object user = memberService.login(loginReqDto);
+	
+	    if (user instanceof Member) {
+	        Member member = (Member) user;
+	        String jwtToken = jwtTokenProvider.createToken(member.getEmail(), member.getRole().toString());
+	        String refreshToken = jwtTokenProvider.createRefreshToken(member.getEmail(), member.getRole().toString());
+	
+	        redisTemplate.opsForValue().set(member.getEmail(), refreshToken, expirationRt, TimeUnit.MINUTES);
+	
+	        loginInfo.put("id", member.getId());
+	        loginInfo.put("token", jwtToken);
+	        loginInfo.put("refreshToken", refreshToken);
+	
+	        return new ResponseEntity<>(new CommonResDto(HttpStatus.OK, "일반 사용자 로그인 성공", loginInfo), HttpStatus.OK);
+	    } else if (user instanceof Owner) {
+	        Owner owner = (Owner) user;
+	        String jwtToken = jwtTokenProvider.createToken(owner.getEmail(), owner.getRole().toString());
+	        String refreshToken = jwtTokenProvider.createRefreshToken(owner.getEmail(), owner.getRole().toString());
+	
+	        redisTemplate.opsForValue().set(owner.getEmail(), refreshToken, expirationRt, TimeUnit.MINUTES);
+	
+	        loginInfo.put("id", owner.getId());
+	        loginInfo.put("token", jwtToken);
+	        loginInfo.put("refreshToken", refreshToken);
+	
+	        return new ResponseEntity<>(new CommonResDto(HttpStatus.OK, "점주 로그인 성공", loginInfo), HttpStatus.OK);
+	    }
+	
+	    throw new IllegalArgumentException("로그인 처리 중 오류가 발생했습니다.");
 	}
 
 	@PostMapping("/refresh-token")
