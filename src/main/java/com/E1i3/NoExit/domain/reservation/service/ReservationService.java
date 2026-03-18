@@ -77,63 +77,56 @@ public class ReservationService {
 	  }
 
     /* 레디스를 통한 예약하기 */
-    @PreAuthorize("hasRole('USER')")
-    @Transactional
-    public Reservation save(ReservationSaveDto dto) {
-        String memberEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        log.debug("Authenticated user email: {}", memberEmail);
-
-        Member member = memberRepository.findByEmail(memberEmail)
-                .orElseThrow(() -> {
-                    log.error("Invalid email: {}", memberEmail);
-                    return new IllegalArgumentException("없는 이메일입니다.");
-                });
-
-        Game game = gameRepository.findById(dto.getGameId())
-                .orElseThrow(() -> {
-                    log.error("Invalid game ID: {}", dto.getGameId());
-                    return new IllegalArgumentException("없는 게임 ID입니다.");
-                });
-
-        Owner owner = game.getStore().getOwner(); // 게임의 스토어를 통해 오너를 조회
-
-        String reservationKey = RESERVATION_LOCK_PREFIX + game.getStore().getStoreName() + ":" + game.getGameName() + ":" + dto.getResDate() + ":" + dto.getResDateTime();
-        log.debug("Reservation key: {}", reservationKey);
-
-        if (Boolean.TRUE.equals(reservationRedisTemplate.hasKey(reservationKey))) {
-            log.error("Reservation conflict for key: {}", reservationKey);
-            throw new IllegalStateException("(예약불가) 이미 예약 중인 시간대 입니다.");
-        }
-
-        // 예약은 30분 이내의 상태 변화가 없다면 자동으로 삭제
-        reservationRedisTemplate.opsForValue().set(reservationKey, "LOCKED", 3, TimeUnit.HOURS);
-
-        try {
-            // 엔티티 생성 시 Owner를 함께 설정
-            Reservation reservation = dto.toEntity(member, game, owner);
-            log.debug("Saving reservation: {}", reservation);
-
-            reservationRedisTemplate.opsForValue().set(reservationKey, "RESERVED", 3, TimeUnit.HOURS); // 3시간 뒤 자동 삭제
-
-            Reservation savedReservation = reservationRepository.save(reservation);
-
-            String receiver_email = owner.getEmail();
-            NotificationResDto notificationResDto = NotificationResDto.builder()
-                    .notification_id(savedReservation.getId())
-                    .email(receiver_email)
-                    .sender_email(memberEmail)
-                    .type(NotificationType.RESERVATION_REQ)
-                    .message(member.getNickname() + "님이 예약을 요청하셨습니다.").build();
-            sseController.publishMessage(notificationResDto, receiver_email);
-            notificationRepository.save(notificationResDto);
-
-            return savedReservation;
-        } catch (Exception e) {
-            log.error("Exception occurred during reservation save: ", e);
-            reservationRedisTemplate.delete(reservationKey);
-            throw e;
-        }
-    }
+	@PreAuthorize("hasRole('USER')")
+	@Transactional
+	public Reservation save(ReservationSaveDto dto) {
+	    String memberEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+	
+	    Member member = memberRepository.findByEmail(memberEmail)
+	            .orElseThrow(() -> new IllegalArgumentException("없는 이메일입니다."));
+	
+	    Game game = gameRepository.findById(dto.getGameId())
+	            .orElseThrow(() -> new IllegalArgumentException("없는 게임 ID입니다."));
+	
+	    Owner owner = game.getStore().getOwner();
+	
+	    String reservationKey = RESERVATION_LOCK_PREFIX
+	            + game.getStore().getStoreName() + ":"
+	            + game.getGameName() + ":"
+	            + dto.getResDate() + ":"
+	            + dto.getResDateTime();
+	
+	    Boolean locked = reservationRedisTemplate.opsForValue()
+	            .setIfAbsent(reservationKey, "LOCKED", 3, TimeUnit.HOURS);
+	
+	    if (!Boolean.TRUE.equals(locked)) {
+	        throw new IllegalStateException("(예약불가) 이미 예약 중인 시간대 입니다.");
+	    }
+	
+	    try {
+	        Reservation reservation = dto.toEntity(member, game, owner);
+	        Reservation savedReservation = reservationRepository.save(reservation);
+	
+	        reservationRedisTemplate.opsForValue().set(reservationKey, "RESERVED", 3, TimeUnit.HOURS);
+	
+	        String receiverEmail = owner.getEmail();
+	        NotificationResDto notificationResDto = NotificationResDto.builder()
+	                .notification_id(savedReservation.getId())
+	                .email(receiverEmail)
+	                .sender_email(memberEmail)
+	                .type(NotificationType.RESERVATION_REQ)
+	                .message(member.getNickname() + "님이 예약을 요청하셨습니다.")
+	                .build();
+	
+	        sseController.publishMessage(notificationResDto, receiverEmail);
+	        notificationRepository.save(notificationResDto);
+	
+	        return savedReservation;
+	    } catch (Exception e) {
+	        reservationRedisTemplate.delete(reservationKey);
+	        throw e;
+	    }
+	}
     /* 예약한 리스트 */
     @PreAuthorize("hasRole('USER')")
     public List<ReservationListResDto> find() {
