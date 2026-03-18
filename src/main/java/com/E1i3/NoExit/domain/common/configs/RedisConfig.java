@@ -106,14 +106,12 @@ public class RedisConfig {
 	@Bean
 	@Qualifier("4")
 	public RedisTemplate<String, Object> redisTemplate3() {
-		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-		redisTemplate.setConnectionFactory(connectionFactoryNotification());
-		redisTemplate.setKeySerializer(new StringRedisSerializer());
-		redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-
-		return redisTemplate;
+	    RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+	    redisTemplate.setConnectionFactory(connectionFactoryBoardLike());
+	    redisTemplate.setKeySerializer(new StringRedisSerializer());
+	    redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+	    return redisTemplate;
 	}
-
 	// 	댓글 좋아요 (4번 데이터베이스)
 	@Bean
 	@Qualifier("5")
@@ -124,12 +122,11 @@ public class RedisConfig {
 	@Bean
 	@Qualifier("5")
 	public RedisTemplate<String, Object> redisTemplate4() {
-		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-		redisTemplate.setConnectionFactory(connectionFactoryNotification());
-		redisTemplate.setKeySerializer(new StringRedisSerializer());
-		redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-
-		return redisTemplate;
+	    RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+	    redisTemplate.setConnectionFactory(connectionFactoryCommentLike());
+	    redisTemplate.setKeySerializer(new StringRedisSerializer());
+	    redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+	    return redisTemplate;
 	}
 
 	// 채팅 서비스 (5번 데이터베이스
