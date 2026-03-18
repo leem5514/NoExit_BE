@@ -105,15 +105,19 @@ public class MemberService {
 		String email = getEmailFromToken();
 		Member member = memberRepository.findByEmail(email)
 			.orElseThrow(() -> new EntityNotFoundException("존재하지 않는 이메일입니다."));
-		String encodedPassword = passwordEncoder.encode(member.getPassword());
-
-		String imageUrl;
-		if (imgFile != null && !imgFile.isEmpty()) {
-			imageUrl = s3Service.uploadFile(imgFile, "member");
-		} else {
-			imageUrl = member.getProfileImage();
-		}
-		return member.updateMember(memberUpdateDto, email, encodedPassword, imageUrl);
+	    String encodedPassword = member.getPassword();
+	    if (memberUpdateDto.getPassword() != null && !memberUpdateDto.getPassword().isBlank()) {
+	        encodedPassword = passwordEncoder.encode(memberUpdateDto.getPassword());
+	    }
+	
+	    String imageUrl;
+	    if (imgFile != null && !imgFile.isEmpty()) {
+	        imageUrl = s3Service.uploadFile(imgFile, "member");
+	    } else {
+	        imageUrl = member.getProfileImage();
+	    }
+	
+	    return member.updateMember(memberUpdateDto, email, encodedPassword, imageUrl);
 	}
 
 	// 로그인
