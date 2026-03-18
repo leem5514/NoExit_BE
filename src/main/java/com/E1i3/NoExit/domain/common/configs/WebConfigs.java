@@ -18,8 +18,13 @@ public class WebConfigs implements WebMvcConfigurer {
 
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
-		registry.addMapping("/**")
-				.allowedOrigins("https://server.noexxit.store")  // 허용할 클라이언트 도메인
+	    registry.addMapping("/**")
+	            .allowedOrigins(
+	                    "https://www.noexxit.store",
+	                    "https://server.noexxit.store",
+	                    "http://localhost:3000",
+	                    "http://localhost:8082"
+	            )
 				.allowedOrigins("https://www.noexxit.store")
 				.allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
 				.allowedHeaders("*")
