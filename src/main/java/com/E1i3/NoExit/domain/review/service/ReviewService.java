@@ -60,41 +60,39 @@ public class ReviewService {
     }
 
     /*  */
-    @PreAuthorize("hasRole('USER')")
+   @PreAuthorize("hasRole('USER')")
     @Transactional
     public Review createReview(ReviewSaveDto dto) {
         String memberEmail = SecurityContextHolder.getContext().getAuthentication().getName();
         Member member = memberRepository.findByEmail(memberEmail)
                 .orElseThrow(() -> new EntityNotFoundException("회원 정보를 찾을 수 없습니다."));
-
+    
         Reservation reservation = reservationRepository.findById(dto.getReservationId())
                 .orElseThrow(() -> new EntityNotFoundException("존재하지 않은 예약입니다."));
-//        Reservation reservation = reservationRepository.findByIdAndDelYN(dto.getReservationId()).orElseThrow(())
-        // 예약 상태가 ACCEPT인지 확인
+    
         if (reservation.getReservationStatus() != ReservationStatus.ACCEPT) {
             throw new IllegalStateException("리뷰를 작성할 수 없는 상태입니다. 예약이 승인되지 않았습니다.");
         }
-
-        // 기존에 삭제된 리뷰가 있는지 확인
+    
         Review existingReview = reviewRepository.findByReservationAndDelYN(reservation, DelYN.Y).orElse(null);
-
         if (existingReview != null) {
-            // 이미 삭제된 리뷰가 있는 경우, 해당 리뷰를 재활성화하고 업데이트 처리
             existingReview.cancelAndRecreateYN();
             existingReview.updateContent(dto.getContent(), dto.getRating(), dto.getReviewImage());
-            updateReviewImage(existingReview, dto.getReviewImage());
+            if (dto.getReviewImage() != null && !dto.getReviewImage().isEmpty()) {
+                updateReviewImage(existingReview, dto.getReviewImage());
+            }
             return reviewRepository.save(existingReview);
         }
-
-        // 새로운 리뷰를 생성하는 로직
-        MultipartFile image = dto.getReviewImage();
+    
         Review review = dto.toEntity(member, reservation);
-
+        Review savedReview = reviewRepository.save(review);
+    
+        MultipartFile image = dto.getReviewImage();
         if (image != null && !image.isEmpty()) {
-            updateReviewImage(review, image);
+            updateReviewImage(savedReview, image);
         }
-
-        return reviewRepository.save(review);
+    
+        return reviewRepository.save(savedReview);
     }
 
     private void updateReviewImage(Review review, MultipartFile image) {
