@@ -113,28 +113,34 @@ public class CommentService {
 		return commentListResDtos;
 	}
 
-	public Comment commentUpdate(Long id, CommentUpdateReqDto dto) { // 댓글 수정
-		String email = SecurityContextHolder.getContext().getAuthentication().getName();
-		Member member = memberRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
-		if (!member.getEmail().equals(email)) {
-			throw new IllegalArgumentException("본인의 댓글만 수정할 수 있습니다.");
-		}
-		Comment comment = commentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException(" 찾을 수 없습니다."));
-		comment.updateEntity(dto);
-		return comment;
+	@Transactional
+	public Comment commentUpdate(Long id, CommentUpdateReqDto dto) {
+	    String email = SecurityContextHolder.getContext().getAuthentication().getName();
+	
+	    Comment comment = commentRepository.findById(id)
+	            .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
+	
+	    if (!comment.getMember().getEmail().equals(email)) {
+	        throw new IllegalArgumentException("본인의 댓글만 수정할 수 있습니다.");
+	    }
+	
+	    comment.updateEntity(dto);
+	    return commentRepository.save(comment);
 	}
 
-	public void commentDelete(Long id) { // 댓글 삭제
-		String email = SecurityContextHolder.getContext().getAuthentication().getName();
-		Member member = memberRepository.findByEmail(email).orElseThrow(() -> new EntityNotFoundException("없는 회원입니다."));
-		if (!member.getEmail().equals(email)) {
-			throw new IllegalArgumentException("본인의 댓글만 수정할 수 있습니다.");
-		}
-		Comment comment = commentRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("찾을 수 없습니다."));
-		Board board = boardRepository.findById(comment.getBoard().getId()).orElse(null);
-		comment.deleteEntity();
-		// commentRepository.delete(comment);
-		boardRepository.save(board);
+	@Transactional
+	public void commentDelete(Long id) {
+	    String email = SecurityContextHolder.getContext().getAuthentication().getName();
+	
+	    Comment comment = commentRepository.findById(id)
+	            .orElseThrow(() -> new EntityNotFoundException("댓글을 찾을 수 없습니다."));
+	
+	    if (!comment.getMember().getEmail().equals(email)) {
+	        throw new IllegalArgumentException("본인의 댓글만 삭제할 수 있습니다.");
+	    }
+	
+	    comment.deleteEntity();
+	    commentRepository.save(comment);
 	}
 
 
