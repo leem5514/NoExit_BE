@@ -77,13 +77,25 @@ public class BoardService {
     }
 
     public Page<BoardListResDto> boardList(BoardSearchDto searchDto, Pageable pageable) {
-        String title = normalize(searchDto != null ? searchDto.getSearchTitle() : null);
-        String contents = normalize(searchDto != null ? searchDto.getSearchContents() : null);
-        BoardType boardType = parseBoardType(searchDto != null ? searchDto.getSearchBoardType() : null);
-
-        Page<BoardListProjection> rows = boardRepository.searchBoards(title, contents, boardType, pageable);
-
-        return rows.map(row -> BoardListResDto.builder()
+        String title = null;
+        String contents = null;
+        BoardType boardType = null;
+    
+        if (searchDto != null) {
+            if (searchDto.getSearchTitle() != null && !searchDto.getSearchTitle().isBlank()) {
+                title = searchDto.getSearchTitle().trim();
+            }
+            if (searchDto.getSearchContents() != null && !searchDto.getSearchContents().isBlank()) {
+                contents = searchDto.getSearchContents().trim();
+            }
+            if (searchDto.getSearchBoardType() != null && !searchDto.getSearchBoardType().isBlank()) {
+                boardType = BoardType.valueOf(searchDto.getSearchBoardType().trim());
+            }
+        }
+    
+        Page<BoardListProjection> boards = boardRepository.searchBoards(title, contents, boardType, pageable);
+    
+        return boards.map(row -> BoardListResDto.builder()
                 .id(row.getId())
                 .writer(row.getWriter())
                 .title(row.getTitle())
@@ -96,15 +108,14 @@ public class BoardService {
                 .build());
     }
 
-    @Transactional
     public BoardDetailResDto boardDetail(Long id) {
         Board board = boardRepository.findDetailBoardById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Board not found with id: " + id));
-
-        if (board.getDelYN() == DelYN.Y) {
+    
+        if (board.getDelYN().equals(DelYN.Y)) {
             throw new IllegalArgumentException("cannot find board");
         }
-
+    
         board.updateBoardHits();
         return board.detailFromEntity();
     }
